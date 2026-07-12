@@ -148,13 +148,3 @@
 .glow-accent {
   box-shadow: 0 0 20px rgba(195, 244, 3, 0.15), 0 0 40px rgba(195, 244, 3, 0.05);
 }
-
-.scanline-bg {
-  background-image: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    var(--border) 2px,
-    var(--border) 4px
-  );
-}

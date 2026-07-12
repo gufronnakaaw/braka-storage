@@ -45,7 +45,7 @@ function FilePreviewContent({ file }: { file: FileItem }) {
   }
 
   return (
-    <div className="flex items-center justify-center w-full h-full bg-secondary/30 scanline-bg">
+    <div className="flex items-center justify-center w-full h-full bg-secondary/30">
       <div className="flex flex-col items-center gap-4">
         <FileIcon type={file.type} size={64} />
         <div className="text-center">

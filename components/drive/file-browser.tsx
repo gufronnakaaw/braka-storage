@@ -150,14 +150,14 @@ export function FileBrowser({
 
   if (files.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-4 scanline-bg">
+      <div className="flex-1 flex flex-col items-center justify-center gap-4">
         <div className="flex items-center justify-center size-16 rounded-2xl bg-secondary/50 border border-border">
           <FolderOpen className="size-8 text-muted-foreground/50" />
         </div>
         <div className="text-center">
           <p className="text-sm text-muted-foreground">This folder is empty</p>
           <p className="text-xs text-muted-foreground/60 mt-1">
-            Drop files here or click &quot;New&quot; to upload
+            Upload files or create a folder to get started.
           </p>
         </div>
       </div>
