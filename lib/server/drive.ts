@@ -6,13 +6,11 @@ import { logActivity } from "./activity-log";
 import { AppError } from "./errors";
 import s3 from "./s3";
 
-/** Check if created_by belongs to a real user (not a webhook/service) */
 async function isUserCreated(createdBy: string): Promise<boolean> {
   const user = await prisma.user.findFirst({ where: { fullname: createdBy } });
   return user !== null;
 }
 
-/** Generate short random hex string (e.g. "a1f3b2c8") */
 function shortId(len = 8): string {
   const bytes = new Uint8Array(len / 2);
   crypto.getRandomValues(bytes);

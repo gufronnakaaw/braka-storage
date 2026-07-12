@@ -94,10 +94,6 @@ export async function confirmUpload(fileIds: string[]): Promise<void> {
   if (!json.success) throw new Error(json.error?.message ?? "Failed to confirm upload");
 }
 
-/**
- * Upload a file directly to S3 via presigned URL with progress tracking.
- * Returns an AbortController so the caller can cancel.
- */
 export function uploadToS3(
   presignedUrl: string,
   file: File,

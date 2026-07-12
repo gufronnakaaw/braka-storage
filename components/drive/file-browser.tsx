@@ -2,31 +2,31 @@
 
 import { FileIcon } from "@/components/drive/file-icon";
 import {
-    ContextMenu,
-    ContextMenuContent,
-    ContextMenuItem,
-    ContextMenuSeparator,
-    ContextMenuTrigger,
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { FileItem } from "@/lib/types";
 import { cn, formatFileSize } from "@/lib/utils";
 import {
-    ArrowUpDown,
-    ChevronDown,
-    ChevronUp,
-    Download,
-    Edit3,
-    Eye,
-    FolderOpen,
-    MoreHorizontal,
-    Trash2,
+  ArrowUpDown,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  Edit3,
+  Eye,
+  FolderOpen,
+  MoreHorizontal,
+  Trash2,
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { useMemo, useState } from "react";
@@ -46,7 +46,6 @@ interface FileBrowserProps {
 
 type SortDir = "asc" | "desc";
 
-/** Generic props shared by both ContextMenuItem and DropdownMenuItem */
 interface MenuItemProps {
   className?: string;
   onClick?: (e: React.MouseEvent) => void;

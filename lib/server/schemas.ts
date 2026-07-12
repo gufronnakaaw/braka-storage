@@ -61,7 +61,6 @@ export const ApiKeyIdParamSchema = z.object({
   id: z.string().min(1, "ID is required"),
 });
 
-/** Extract field-level errors from ZodError without deprecated .flatten() */
 export function zodFieldErrors(error: z.ZodError): Record<string, string[]> {
   const fieldErrors: Record<string, string[]> = {};
   for (const issue of error.issues) {
@@ -71,7 +70,6 @@ export function zodFieldErrors(error: z.ZodError): Record<string, string[]> {
   return fieldErrors;
 }
 
-/** Parse & validate JSON body against a Zod schema */
 export async function parseBody<T extends z.ZodTypeAny>(
   req: Request,
   schema: T,
