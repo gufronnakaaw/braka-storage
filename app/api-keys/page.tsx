@@ -5,88 +5,63 @@ import { PageHeader } from "@/components/layout/page-header";
 import { RefreshButton } from "@/components/ui/refresh-button";
 import { CustomSelect } from "@/components/ui/select";
 import {
-  createApiKey,
   EXPIRY_LABELS,
-  fetchApiKeys,
-  revokeApiKey,
-  type ApiKeyRecord,
   type ExpiryOption,
 } from "@/lib/api/api-keys";
+import {
+  useApiKeys,
+  useCreateApiKey,
+  useRevokeApiKey,
+} from "@/lib/hooks";
 import { cn } from "@/lib/utils";
-import { toastSuccess } from "@/lib/utils/toast";
+import { toastError, toastSuccess } from "@/lib/utils/toast";
 import { Check, Copy, Eye, KeyRound, ShieldCheck, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 export default function ApiKeysPage() {
-  const [keys, setKeys] = useState<ApiKeyRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newExpiry, setNewExpiry] = useState<ExpiryOption>("never");
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const loadKeys = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      setKeys(await fetchApiKeys());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const { data: keys, isLoading, error: swrError, mutate } = useApiKeys();
+  const { trigger: createKey, isMutating: isCreating } = useCreateApiKey();
+  const { trigger: revokeKey } = useRevokeApiKey();
 
-  useEffect(() => {
-    void loadKeys();
-  }, [loadKeys]);
-
-  const handleCreate = useCallback(async () => {
+  async function handleCreate() {
     if (!newName.trim() || isCreating) return;
-    setIsCreating(true);
-    setError(null);
     try {
-      const { plainTextKey } = await createApiKey(newName, newExpiry);
+      const { plainTextKey } = await createKey({ name: newName, expiry: newExpiry });
       toastSuccess("API key created");
       setCreatedKey(plainTextKey);
       setShowKeyModal(true);
       setNewName("");
       setNewExpiry("never");
-      await loadKeys();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setIsCreating(false);
+      toastError(err, "Failed to create API key");
     }
-  }, [isCreating, loadKeys, newName, newExpiry]);
+  }
 
-  const handleRevoke = useCallback(
-    async (id: string) => {
-      setError(null);
-      try {
-        await revokeApiKey(id);
-        toastSuccess("API key revoked");
-        await loadKeys();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
-      }
-    },
-    [loadKeys],
-  );
+  async function handleRevoke(id: string) {
+    try {
+      await revokeKey(id);
+      toastSuccess("API key revoked");
+    } catch (err) {
+      toastError(err, "Failed to revoke API key");
+    }
+  }
 
-  const handleCopyKey = useCallback(() => {
+  function handleCopyKey() {
     if (createdKey) {
       navigator.clipboard.writeText(createdKey);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  }, [createdKey]);
+  }
 
   const activeCount = useMemo(
-    () => keys.filter((item) => item.status === "ACTIVE").length,
+    () => (keys ?? []).filter((item) => item.status === "ACTIVE").length,
     [keys],
   );
 
@@ -105,7 +80,7 @@ export default function ApiKeysPage() {
               <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground sm:text-xs">Create Key</p>
               <p className="mt-1 text-xs text-foreground sm:text-sm">Active keys: {activeCount}</p>
             </div>
-            <RefreshButton onClick={() => void loadKeys()} />
+            <RefreshButton onClick={() => mutate()} />
           </div>
 
           <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:flex-row">
@@ -134,7 +109,7 @@ export default function ApiKeysPage() {
             </button>
           </div>
 
-          {error && <p className="mt-3 text-xs text-destructive">{error}</p>}
+          {swrError && <p className="mt-3 text-xs text-destructive">{(swrError as Error)?.message ?? "Failed to load API keys"}</p>}
         </section>
 
         <section className="rounded-xl border border-border bg-card/60 p-3 sm:p-4">
@@ -142,7 +117,7 @@ export default function ApiKeysPage() {
 
           {isLoading ? (
             <p className="mt-3 text-sm text-muted-foreground">Loading API keys...</p>
-          ) : keys.length === 0 ? (
+          ) : (keys ?? []).length === 0 ? (
             <p className="mt-3 text-center text-sm text-muted-foreground">Belum ada API key.</p>
           ) : (
             <>
@@ -160,7 +135,7 @@ export default function ApiKeysPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {keys.map((key) => (
+                    {(keys ?? []).map((key) => (
                       <tr key={key.id} className="border-b border-border/70 last:border-b-0">
                         <td className="px-3 py-2.5 text-sm font-medium text-foreground">
                           <p className="max-w-40 truncate">{key.name}</p>
@@ -212,7 +187,7 @@ export default function ApiKeysPage() {
               </div>
 
               <div className="mt-3 space-y-2 md:hidden">
-                {keys.map((key) => (
+                {(keys ?? []).map((key) => (
                   <div key={key.id} className="rounded-lg border border-border/80 bg-background/60 p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">

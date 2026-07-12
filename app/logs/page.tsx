@@ -4,50 +4,24 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { PageHeader } from "@/components/layout/page-header";
 import { RefreshButton } from "@/components/ui/refresh-button";
 import { CustomSelect } from "@/components/ui/select";
-import {
-  fetchLogs,
-  TIME_FILTERS,
-  type LogEntry,
-  type TimeFilter,
-} from "@/lib/api/logs";
+import { TIME_FILTERS, type TimeFilter } from "@/lib/api/logs";
+import { useLogs } from "@/lib/hooks";
 import { cn, formatDate, getActionColor, getActionIcon } from "@/lib/utils";
-import { toastError } from "@/lib/utils/toast";
 import {
   ArrowLeft,
   ArrowRight,
   ScrollText,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function LogsPage() {
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("1d");
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
+  const { data, isLoading, error, mutate } = useLogs(page, timeFilter);
 
-  const loadLogs = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await fetchLogs(page, timeFilter);
-      setLogs(data.data);
-      setTotalPages(data.totalPages);
-      setTotal(data.total);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
-      setError(msg);
-      toastError(err, "Failed to load logs");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, timeFilter]);
-
-  useEffect(() => {
-    void loadLogs();
-  }, [loadLogs]);
+  const logs = data?.data ?? [];
+  const totalPages = data?.totalPages ?? 1;
+  const total = data?.total ?? 0;
 
   function handleTimeFilterChange(value: string) {
     setTimeFilter(value as TimeFilter);
@@ -67,7 +41,7 @@ export default function LogsPage() {
                 {total} event{total !== 1 ? "s" : ""} found
               </p>
             </div>
-            <RefreshButton onClick={() => void loadLogs()} />
+            <RefreshButton onClick={() => mutate()} />
           </div>
           <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:flex-row">
             <CustomSelect
@@ -92,9 +66,9 @@ export default function LogsPage() {
             </div>
           ) : error ? (
             <div className="py-8 text-center">
-              <p className="text-sm text-destructive">{error}</p>
+              <p className="text-sm text-destructive">{(error as Error)?.message ?? "Unknown error"}</p>
               <button
-                onClick={() => void loadLogs()}
+                onClick={() => mutate()}
                 className="mt-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
               >
                 Try again

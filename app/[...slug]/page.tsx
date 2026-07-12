@@ -10,22 +10,24 @@ import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Topbar } from "@/components/layout/topbar";
 import { FileGridSkeleton, FileListSkeleton } from "@/components/ui/loading-skeleton";
+import { fetchFolderPath } from "@/lib/api/drive";
 import {
-  createFolderApi,
-  fetchBreadcrumbs,
-  fetchFolderPath,
-  fetchItemById,
-  fetchItems,
-  fetchResolveSlug,
-  fetchSearchFiles,
-} from "@/lib/api/drive";
-import { useDriveViewMode } from "@/lib/hooks";
-import type { FileItem, FolderBreadcrumb } from "@/lib/types";
+  useCreateFolder,
+  useDeleteItem,
+  useDriveBreadcrumbs,
+  useDriveFolder,
+  useDriveItems,
+  useDriveResolveSlug,
+  useDriveSearch,
+  useDriveViewMode,
+  useRenameItem,
+} from "@/lib/hooks";
+import type { FileItem } from "@/lib/types";
 import { downloadFile } from "@/lib/utils";
 import { toastError, toastSuccess } from "@/lib/utils/toast";
 import { FolderPlus, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { use, useCallback, useEffect, useRef, useState } from "react";
+import { use, useMemo, useRef, useState } from "react";
 
 export default function FolderPage({
   params,
@@ -42,51 +44,32 @@ export default function FolderPage({
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [displayFiles, setDisplayFiles] = useState<FileItem[]>([]);
-  const [breadcrumbs, setBreadcrumbs] = useState<FolderBreadcrumb[]>([]);
-  const [folder, setFolder] = useState<FileItem | undefined>(undefined);
-  const [folderId, setFolderId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
   const [renamingFile, setRenamingFile] = useState<FileItem | null>(null);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const resolvedId = await fetchResolveSlug(slug);
-      setFolderId(resolvedId);
+  const { data: resolvedId, isLoading: resolvingSlug } = useDriveResolveSlug(slug);
+  const { data: folder, isLoading: folderLoading } = useDriveFolder(resolvedId ?? undefined);
+  const { data: items, isLoading: itemsLoading, mutate: mutateItems } = useDriveItems(
+    resolvedId === null ? undefined : resolvedId,
+  );
+  const { data: searchResults, isLoading: searchLoading } = useDriveSearch(searchQuery);
+  const { data: breadcrumbs, isLoading: breadcrumbsLoading } = useDriveBreadcrumbs(
+    resolvedId === null ? undefined : resolvedId,
+  );
 
-      if (!resolvedId) {
-        setNotFound(true);
-        return;
-      }
+  const { trigger: createFolder } = useCreateFolder();
+  const { trigger: deleteItem } = useDeleteItem();
+  const { trigger: renameItem } = useRenameItem();
 
-      const folderData = await fetchItemById(resolvedId);
-      if (!folderData || folderData.type !== "folder") {
-        setNotFound(true);
-        return;
-      }
+  const folderId = resolvedId ?? null;
+  const displayFiles = useMemo(() => {
+    const files = searchQuery ? searchResults : items;
+    return files ?? [];
+  }, [searchQuery, searchResults, items]);
 
-      setFolder(folderData);
-      setNotFound(false);
-
-      if (searchQuery) {
-        setDisplayFiles(await fetchSearchFiles(searchQuery));
-      } else {
-        setDisplayFiles(await fetchItems(resolvedId));
-      }
-      setBreadcrumbs(await fetchBreadcrumbs(resolvedId));
-    } catch (err) {
-      console.error("Failed to load data:", err);
-      setNotFound(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [slug, searchQuery]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const notFound = !resolvingSlug && resolvedId === null;
+  const loading =
+    resolvingSlug ||
+    (!notFound && (folderLoading || itemsLoading || breadcrumbsLoading));
 
   async function handleFolderOpen(subFolderId: string) {
     const subPath = await fetchFolderPath(subFolderId);
@@ -96,11 +79,15 @@ export default function FolderPage({
 
 
   async function handleDelete(file: FileItem) {
-    const endpoint = file.type === "folder"
-      ? `/api/drive/folders/${file.id}`
-      : `/api/drive/files/${file.id}`;
-    const res = await fetch(endpoint, { method: "DELETE" });
-    if (res.ok) await loadData();
+    try {
+      await deleteItem({
+        id: file.id,
+        type: file.type === "folder" ? "folder" : "file",
+        parentId: folderId,
+      });
+    } catch (err) {
+      toastError(err, "Failed to delete");
+    }
   }
 
   if (!loading && notFound) {
@@ -137,7 +124,7 @@ export default function FolderPage({
       </div>
 
       <Breadcrumb
-        items={breadcrumbs}
+        items={breadcrumbs ?? []}
         onNavigate={async (id) => {
           if (id === null) {
             router.push("/");
@@ -190,7 +177,7 @@ export default function FolderPage({
         />
       )}
 
-      <UploadZone ref={uploadRef} enabled folderId={folderId} onUploaded={loadData} />
+      <UploadZone ref={uploadRef} enabled folderId={folderId} onUploaded={() => mutateItems()} />
 
       <UploadModal
         open={showUploadModal}
@@ -203,9 +190,8 @@ export default function FolderPage({
         onClose={() => setShowCreateFolder(false)}
         onCreate={async (name) => {
           try {
-            await createFolderApi(name, folderId);
+            await createFolder({ name, parentId: folderId });
             toastSuccess("Folder created");
-            await loadData();
           } catch (err) {
             toastError(err, "Failed to create folder");
           }
@@ -220,18 +206,13 @@ export default function FolderPage({
         onRename={async (newName) => {
           if (!renamingFile) return;
           try {
-            const endpoint = renamingFile.type === "folder"
-              ? `/api/drive/folders/${renamingFile.id}`
-              : `/api/drive/files/${renamingFile.id}`;
-            const res = await fetch(endpoint, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ name: newName }),
+            await renameItem({
+              id: renamingFile.id,
+              type: renamingFile.type === "folder" ? "folder" : "file",
+              name: newName,
+              parentId: folderId,
             });
-            if (res.ok) {
-              toastSuccess("Renamed successfully");
-              await loadData();
-            }
+            toastSuccess("Renamed successfully");
           } catch (err) {
             toastError(err, "Failed to rename");
           }

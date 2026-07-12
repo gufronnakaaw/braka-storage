@@ -6,19 +6,18 @@ import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Topbar } from "@/components/layout/topbar";
 import { FileGridSkeleton, FileListSkeleton } from "@/components/ui/loading-skeleton";
+import { fetchFolderPath } from "@/lib/api/drive";
 import {
-    createFolderApi,
-    fetchBreadcrumbs,
-    fetchFolderPath,
-    fetchItems,
-    fetchSearchFiles,
-} from "@/lib/api/drive";
-import { useDriveViewMode } from "@/lib/hooks";
-import type { FileItem, FolderBreadcrumb } from "@/lib/types";
+  useCreateFolder,
+  useDriveBreadcrumbs,
+  useDriveItems,
+  useDriveSearch,
+  useDriveViewMode,
+} from "@/lib/hooks";
 import { toastError, toastSuccess } from "@/lib/utils/toast";
 import { FolderPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 
 export default function Home() {
   const router = useRouter();
@@ -27,31 +26,18 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "modifiedAt" | "size" | "type">("name");
   const [showCreateFolder, setShowCreateFolder] = useState(false);
-  const [displayFiles, setDisplayFiles] = useState<FileItem[]>([]);
-  const [breadcrumbs, setBreadcrumbs] = useState<FolderBreadcrumb[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      if (searchQuery) {
-        const results = await fetchSearchFiles(searchQuery);
-        setDisplayFiles(results.filter((f) => f.type === "folder"));
-      } else {
-        const items = await fetchItems(null);
-        setDisplayFiles(items.filter((f) => f.type === "folder"));
-      }
-      setBreadcrumbs(await fetchBreadcrumbs(null));
-    } catch (err) {
-      console.error("Failed to load data:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [searchQuery]);
+  const { data: items, isLoading: itemsLoading } = useDriveItems(null);
+  const { data: searchResults, isLoading: searchLoading } = useDriveSearch(searchQuery);
+  const { data: breadcrumbs, isLoading: breadcrumbsLoading } = useDriveBreadcrumbs(null);
+  const { trigger: createFolder } = useCreateFolder();
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const displayFiles = useMemo(() => {
+    const files = searchQuery ? searchResults : items;
+    return (files ?? []).filter((f) => f.type === "folder");
+  }, [searchQuery, searchResults, items]);
+
+  const loading = searchQuery ? searchLoading : (itemsLoading || breadcrumbsLoading);
 
   async function handleFolderOpen(folderId: string) {
     try {
@@ -75,7 +61,7 @@ export default function Home() {
       </div>
 
       <Breadcrumb
-        items={breadcrumbs}
+        items={breadcrumbs ?? []}
         onNavigate={async (id) => {
           if (id === null) {
             router.push("/");
@@ -124,9 +110,8 @@ export default function Home() {
         onClose={() => setShowCreateFolder(false)}
         onCreate={async (name) => {
           try {
-            await createFolderApi(name, null);
+            await createFolder({ name, parentId: null });
             toastSuccess("Folder created");
-            await loadData();
           } catch (err) {
             toastError(err, "Failed to create folder");
           }
