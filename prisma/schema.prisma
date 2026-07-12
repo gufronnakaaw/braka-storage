@@ -1,0 +1,135 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Status {
+  UNREADY
+  PROCESSING
+  READY
+}
+
+enum LogAction {
+  CREATE
+  RENAME
+  MOVE
+  DELETE
+  UPLOAD
+  DOWNLOAD
+  LOGIN
+  LOGOUT
+  LOGIN_FAILED
+  API_KEY_CREATE
+  API_KEY_REVOKE
+}
+
+enum EntityType {
+  FILE
+  FOLDER
+  USER
+  API_KEY
+}
+
+enum ApiKeyStatus {
+  ACTIVE
+  REVOKED
+}
+
+model User {
+  id                String              @id @default(cuid())
+  fullname          String
+  username          String              @unique
+  password          String              @db.Text
+  createdAt         DateTime            @default(now())
+
+  @@map("user")
+}
+
+model Folder {
+  id                String              @id @default(cuid())
+  name              String
+
+  parent_id         String?
+  parent            Folder?             @relation("FolderTree", fields: [parent_id], references: [id])
+  children          Folder[]            @relation("FolderTree")
+
+  files             File[]
+
+  created_at        DateTime            @default(now())
+  created_by        String
+  updated_at        DateTime            @updatedAt
+  updated_by        String
+
+  @@unique([name, parent_id])
+  @@index([parent_id])
+  @@map("folder")
+}
+
+model File {
+  id                String              @id @default(cuid())
+  filename          String
+  size              Int     
+  mime_type         String
+  key               String              @unique
+  status            Status              @default(UNREADY)
+  folder_id         String
+  folder            Folder              @relation(fields: [folder_id], references: [id])
+
+  created_at        DateTime            @default(now())
+  created_by        String
+  updated_at        DateTime            @updatedAt
+  updated_by        String
+
+  @@index([folder_id])
+  @@map("file")
+}
+
+model ApiKey {
+  id                String              @id @default(cuid())
+  name              String
+  prefix            String
+  last4             String
+  secret            String              @db.Text
+
+  status            ApiKeyStatus        @default(ACTIVE)
+
+  created_at         DateTime            @default(now())
+  expires_at         DateTime?
+  last_used_at        DateTime?
+
+  @@map("api_key")
+}
+
+model ActivityLog {
+  id                String              @id @default(cuid())
+
+  action            LogAction
+  entity_type       EntityType
+  entity_id         String?
+  entity_name       String?
+
+  description       String
+
+  ip_address        String?
+
+  old_value         String?             @db.Text
+  new_value         String?             @db.Text
+
+  performed_by      String
+
+  created_at        DateTime            @default(now())
+
+  @@index([entity_type, entity_id])
+  @@index([performed_by])
+  @@index([created_at])
+  @@map("activity_log")
+}
