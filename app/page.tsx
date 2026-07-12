@@ -52,7 +52,7 @@ export default function Home() {
     <DashboardLayout activeView="drive" mobileTitle="Drive">
       <div className="hidden md:block">
         <Topbar
-          title="Drive"
+          title=""
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           searchQuery={searchQuery}

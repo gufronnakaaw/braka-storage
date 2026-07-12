@@ -2,7 +2,7 @@
 
 import type { FolderBreadcrumb } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { ChevronRight, Home } from "lucide-react";
+import { ChevronRight, HardDrive } from "lucide-react";
 
 interface BreadcrumbProps {
   items: FolderBreadcrumb[];
@@ -29,7 +29,7 @@ export function Breadcrumb({ items, onNavigate }: BreadcrumbProps) {
               )}
               disabled={isLast}
             >
-              {index === 0 && <Home className="size-3" />}
+              {index === 0 && <HardDrive className="size-3" />}
               {item.name}
             </button>
           </div>
