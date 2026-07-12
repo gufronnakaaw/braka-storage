@@ -128,14 +128,15 @@ export function UploadModal({ open, onClose, onUpload }: UploadModalProps) {
         )}
 
         <div className="flex items-center justify-end gap-2 pt-1">
-          <Button variant="ghost" size="sm" onClick={handleClose}>
+          <Button variant="ghost" size="sm" onClick={handleClose} 
+            className="cursor-pointer">
             Cancel
           </Button>
           <Button
             size="sm"
             disabled={selectedFiles.length === 0}
             onClick={handleUpload}
-            className="gap-1.5"
+            className="gap-1.5 cursor-pointer"
           >
             <Plus className="size-3.5" />
             Upload {selectedFiles.length > 0 && `(${selectedFiles.length})`}
