@@ -110,7 +110,7 @@ export function UploadModal({ open, onClose, onUpload }: UploadModalProps) {
                     size={14}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-foreground truncate">{file.name}</p>
+                    <p className="text-xs text-foreground break-all">{file.name}</p>
                   </div>
                   <span className="text-[10px] text-muted-foreground shrink-0">
                     {formatFileSize(file.size)}

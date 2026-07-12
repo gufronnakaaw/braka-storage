@@ -172,7 +172,7 @@ export default function LogsPage() {
                         {formatDate(log.created_at)}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm text-foreground">{log.description}</p>
+                    <p className="mt-2 text-sm text-foreground wrap-break-word">{log.description}</p>
                     <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted-foreground">
                       <span className="capitalize">{log.entity_type.toLowerCase()}</span>
                       <span>&middot;</span>
