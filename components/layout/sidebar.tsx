@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useStorageUsage } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 import {
   HardDrive,
@@ -30,6 +31,11 @@ const navItems: Array<{
 
 export function Sidebar({ activeView, onViewChange }: SidebarProps) {
   const session = useSession();
+  const { data: storage } = useStorageUsage();
+
+  const usedGB = storage ? (storage.usedBytes / (1024 * 1024 * 1024)).toFixed(1) : "0.0";
+  const maxGB = storage ? (storage.maxBytes / (1024 * 1024 * 1024)).toFixed(0) : "10";
+  const percentage = storage?.percentage ?? 0;
 
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
@@ -76,9 +82,9 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
       <div className="mt-auto space-y-3 p-3 pt-0">
         <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/60 p-3">
           <p className="text-[11px] uppercase tracking-wider text-sidebar-foreground/60">Storage</p>
-          <p className="mt-1 text-xs text-sidebar-foreground/80">2 GB of 10 GB used</p>
+          <p className="mt-1 text-xs text-sidebar-foreground/80">{usedGB} GB of {maxGB} GB used</p>
           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-black/20">
-            <div className="h-full w-[20%] rounded-full bg-sidebar-primary" />
+            <div className="h-full rounded-full bg-sidebar-primary transition-all duration-500" style={{ width: `${percentage}%` }} />
           </div>
         </div>
 

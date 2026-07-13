@@ -1,10 +1,28 @@
 import prisma from "@/lib/server/prisma";
-import type { FileItem, FolderBreadcrumb } from "@/lib/types";
+import type { FileItem, FolderBreadcrumb, StorageUsage } from "@/lib/types";
 import { getFileTypeFromExtension } from "@/lib/utils";
 import { auth } from "../auth";
 import { logActivity } from "./activity-log";
 import { AppError } from "./errors";
 import s3 from "./s3";
+
+export async function getStorageUsage(): Promise<StorageUsage> {
+  const result = await prisma.file.aggregate({
+    _sum: { size: true },
+    _count: true,
+  });
+
+  const usedBytes = result._sum.size ?? 0;
+  const fileCount = result._count;
+  const maxBytes = 10 * 1024 * 1024 * 1024; // 10 GB
+
+  return {
+    usedBytes,
+    maxBytes,
+    fileCount,
+    percentage: Math.min(Math.round((usedBytes / maxBytes) * 100), 100),
+  };
+}
 
 async function isUserCreated(createdBy: string): Promise<boolean> {
   const user = await prisma.user.findFirst({ where: { fullname: createdBy } });

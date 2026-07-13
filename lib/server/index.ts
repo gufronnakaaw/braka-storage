@@ -8,20 +8,20 @@ export { apiError, apiSuccess } from "./response";
 export { withAuth, withErrorHandler } from "./middleware";
 
 export {
-  ApiKeyIdParamSchema, BreadcrumbsQuerySchema, ConfirmUploadSchema, CreateFolderSchema, FolderIdParamSchema, FolderPathQuerySchema,
-  ItemsQuerySchema, LogsQuerySchema, parseBody,
-  parseQuery, PresignFileSchema,
-  PresignUploadSchema, RenameSchema, ResolveQuerySchema,
-  SearchQuerySchema
+    ApiKeyIdParamSchema, BreadcrumbsQuerySchema, ConfirmUploadSchema, CreateFolderSchema, FolderIdParamSchema, FolderPathQuerySchema,
+    ItemsQuerySchema, LogsQuerySchema, parseBody,
+    parseQuery, PresignFileSchema,
+    PresignUploadSchema, RenameSchema, ResolveQuerySchema,
+    SearchQuerySchema
 } from "./schemas";
 
 export { logActivity } from "./activity-log";
 
 export { createApiKey, CreateApiKeySchema, listApiKeys, revokeApiKey } from "./api-keys";
 export {
-  confirmUploads, createFolder, deleteFile,
-  deleteFolder, generatePresignedUrls, getBreadcrumbs, getFileById, getFilesByParent, getFolderPath, renameFile,
-  renameFolder, resolveSlugToFolderId, searchFiles
+    confirmUploads, createFolder, deleteFile,
+    deleteFolder, generatePresignedUrls, getBreadcrumbs, getFileById, getFilesByParent, getFolderPath, getStorageUsage, renameFile,
+    renameFolder, resolveSlugToFolderId, searchFiles
 } from "./drive";
 export { getLogs } from "./logs";
 

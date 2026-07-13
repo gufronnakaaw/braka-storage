@@ -33,3 +33,10 @@ export interface FolderBreadcrumb {
   id: string | null;
   name: string;
 }
+
+export interface StorageUsage {
+  usedBytes: number;
+  maxBytes: number;
+  fileCount: number;
+  percentage: number;
+}
