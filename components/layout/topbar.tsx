@@ -1,8 +1,8 @@
 'use client';
 
-import { useTheme } from '@/components/providers/theme-provider';
 import { cn } from '@/lib/utils';
 import { LayoutGrid, LayoutList, Moon, Search, Sun, X } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { useState } from 'react';
 
 interface TopbarProps {
@@ -21,7 +21,7 @@ export function Topbar({
   onSearchChange,
 }: TopbarProps) {
   const [searchFocused, setSearchFocused] = useState(false);
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   return (
     <header className="flex items-center gap-3 h-14 px-5 border-b border-border bg-background/80 backdrop-blur-sm">
@@ -84,7 +84,7 @@ export function Topbar({
         </div>
 
         <button
-          onClick={toggleTheme}
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           className="flex size-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           title={
             theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'

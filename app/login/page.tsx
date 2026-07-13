@@ -1,8 +1,8 @@
 "use client";
 
-import { useTheme } from "@/components/providers/theme-provider";
 import { Eye, EyeOff, Loader2, Lock, Moon, Sun, User } from "lucide-react";
 import { signIn } from "next-auth/react";
+import { useTheme } from 'next-themes';
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SubmitEvent, Suspense, useState } from "react";
@@ -11,7 +11,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -52,7 +52,7 @@ function LoginForm() {
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-background px-4">
       <button
-        onClick={toggleTheme}
+        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         className="fixed top-5 right-5 flex size-9 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
         title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
       >

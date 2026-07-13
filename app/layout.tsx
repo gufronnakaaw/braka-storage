@@ -1,8 +1,7 @@
 import { AuthSessionProvider } from "@/components/providers/session-provider";
-import { ThemeInit } from "@/components/providers/theme-init";
-import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import type { Metadata } from "next";
+import { ThemeProvider } from 'next-themes';
 import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -25,10 +24,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${jetbrainsMono.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <ThemeInit />
         <Toaster position="bottom-right" />
         <AuthSessionProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider attribute="class">{children}</ThemeProvider>
         </AuthSessionProvider>
       </body>
     </html>
