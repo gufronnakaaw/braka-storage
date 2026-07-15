@@ -25,6 +25,7 @@ import {
   Edit3,
   Eye,
   FolderOpen,
+  Link,
   MoreHorizontal,
   Trash2,
 } from "lucide-react";
@@ -37,6 +38,7 @@ interface FileBrowserProps {
   onFolderOpen: (folderId: string) => void;
   onFilePreview: (file: FileItem) => void;
   onDownload?: (file: FileItem) => void;
+  onCopyUrl?: (file: FileItem) => void;
   onRename?: (file: FileItem) => void;
   onDelete?: (file: FileItem) => void;
   sortBy: "name" | "modifiedAt" | "size" | "type";
@@ -58,6 +60,7 @@ export function FileBrowser({
   onFolderOpen,
   onFilePreview,
   onDownload,
+  onCopyUrl,
   onRename,
   onDelete,
   sortBy,
@@ -134,6 +137,11 @@ export function FileBrowser({
         {isFile && (
           <Item className="gap-2 text-sm cursor-pointer" onClick={(e) => { e.stopPropagation(); onDownload?.(file); }}>
             <Download className="size-3.5" /> Download
+          </Item>
+        )}
+        {isFile && (
+          <Item className="gap-2 text-sm cursor-pointer" onClick={(e) => { e.stopPropagation(); onCopyUrl?.(file); }}>
+            <Link className="size-3.5" /> Copy URL
           </Item>
         )}
         {isFile && <Separator />}

@@ -6,6 +6,7 @@ import { downloadFile, formatFileSize } from "@/lib/utils";
 import {
   Download,
   ExternalLink,
+  Link,
   Maximize2,
   X
 } from "lucide-react";
@@ -27,6 +28,7 @@ function isImageFile(file: FileItem): boolean {
 interface PreviewModalProps {
   file: FileItem | null;
   onClose: () => void;
+  onCopyUrl?: (file: FileItem) => void;
 }
 
 function FilePreviewContent({ file }: { file: FileItem }) {
@@ -61,7 +63,7 @@ function FilePreviewContent({ file }: { file: FileItem }) {
 
 
 
-export function PreviewModal({ file, onClose }: PreviewModalProps) {
+export function PreviewModal({ file, onClose, onCopyUrl }: PreviewModalProps) {
   const [isMaximized, setIsMaximized] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -117,6 +119,13 @@ export function PreviewModal({ file, onClose }: PreviewModalProps) {
               title="Download"
             >
               <Download className="size-3.5" />
+            </button>
+            <button
+              onClick={() => onCopyUrl?.(file)}
+              className="flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              title="Copy URL"
+            >
+              <Link className="size-3.5" />
             </button>
             <button
               onClick={onExternalLink}

@@ -90,6 +90,14 @@ export default function FolderPage({
     }
   }
 
+  function handleCopyUrl(file: FileItem) {
+    if (!file.key) return;
+    const base = process.env.NEXT_PUBLIC_PREVIEW_URL ?? "";
+    const url = `${base}/${file.key}`;
+    navigator.clipboard.writeText(url);
+    toastSuccess("URL copied to clipboard");
+  }
+
   if (!loading && notFound) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -170,6 +178,7 @@ export default function FolderPage({
           onFolderOpen={handleFolderOpen}
           onFilePreview={setPreviewFile}
           onDownload={(file) => downloadFile(file.id, file.name)}
+          onCopyUrl={handleCopyUrl}
           onRename={(file) => setRenamingFile(file)}
           onDelete={handleDelete}
           sortBy={sortBy}
@@ -198,7 +207,7 @@ export default function FolderPage({
         }}
       />
 
-      <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
+      <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} onCopyUrl={handleCopyUrl} />
       <RenameModal
         open={!!renamingFile}
         currentName={renamingFile?.name ?? ""}
