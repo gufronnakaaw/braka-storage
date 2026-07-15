@@ -1,15 +1,16 @@
-import prisma from "@/lib/server/prisma";
-import type { FileItem, FolderBreadcrumb, StorageUsage } from "@/lib/types";
-import { getFileTypeFromExtension } from "@/lib/utils";
-import { auth } from "../auth";
-import { logActivity } from "./activity-log";
-import { AppError } from "./errors";
-import s3 from "./s3";
+import prisma from '@/lib/server/prisma';
+import type { FileItem, FolderBreadcrumb, StorageUsage } from '@/lib/types';
+import { getFileTypeFromExtension } from '@/lib/utils';
+import { auth } from '../auth';
+import { logActivity } from './activity-log';
+import { AppError } from './errors';
+import s3 from './s3';
 
 export async function getStorageUsage(): Promise<StorageUsage> {
   const result = await prisma.file.aggregate({
     _sum: { size: true },
     _count: true,
+    where: { status: 'READY' },
   });
 
   const usedBytes = result._sum.size ?? 0;
@@ -32,7 +33,7 @@ async function isUserCreated(createdBy: string): Promise<boolean> {
 function shortId(len = 8): string {
   const bytes = new Uint8Array(len / 2);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 function folderToItem(folder: {
@@ -46,7 +47,7 @@ function folderToItem(folder: {
   return {
     id: folder.id,
     name: folder.name,
-    type: "folder",
+    type: 'folder',
     parentId: folder.parent_id,
     createdAt: folder.created_at.toISOString(),
     modifiedAt: folder.updated_at.toISOString(),
@@ -67,9 +68,9 @@ function fileToItem(file: {
   updated_at: Date;
   created_by: string;
 }): FileItem {
-  const ext = file.filename.includes(".")
-    ? file.filename.split(".").pop() ?? ""
-    : "";
+  const ext = file.filename.includes('.')
+    ? (file.filename.split('.').pop() ?? '')
+    : '';
   return {
     id: file.id,
     name: file.filename,
@@ -88,31 +89,27 @@ function fileToItem(file: {
 }
 
 export async function getFilesByParent(
-  parentId: string | null
+  parentId: string | null,
 ): Promise<FileItem[]> {
   const folders = await prisma.folder.findMany({
     where: {
       parent_id: parentId,
     },
-    orderBy: { name: "asc" },
+    orderBy: { name: 'asc' },
   });
 
   const files = await prisma.file.findMany({
     where: {
       folder_id: parentId ?? undefined,
+      status: 'READY',
     },
-    orderBy: { filename: "asc" },
+    orderBy: { filename: 'asc' },
   });
 
-  return [
-    ...folders.map(folderToItem),
-    ...files.map(fileToItem),
-  ];
+  return [...folders.map(folderToItem), ...files.map(fileToItem)];
 }
 
-export async function getFileById(
-  id: string
-): Promise<FileItem | undefined> {
+export async function getFileById(id: string): Promise<FileItem | undefined> {
   const folder = await prisma.folder.findUnique({
     where: { id },
   });
@@ -120,7 +117,7 @@ export async function getFileById(
   if (folder) return folderToItem(folder);
 
   const file = await prisma.file.findUnique({
-    where: { id },
+    where: { id, status: 'READY' },
   });
 
   if (file) return fileToItem(file);
@@ -130,10 +127,10 @@ export async function getFileById(
 
 export async function createFolder(
   name: string,
-  parentId: string | null
+  parentId: string | null,
 ): Promise<FileItem> {
   const session = await auth();
-  const performedBy = session?.user?.name || "system";
+  const performedBy = session?.user?.name || 'system';
 
   const folder = await prisma.folder.create({
     data: {
@@ -145,8 +142,8 @@ export async function createFolder(
   });
 
   await logActivity({
-    action: "CREATE",
-    entityType: "FOLDER",
+    action: 'CREATE',
+    entityType: 'FOLDER',
     entityId: folder.id,
     entityName: folder.name,
     description: `Created folder "${folder.name}"`,
@@ -157,17 +154,21 @@ export async function createFolder(
 }
 
 export async function getBreadcrumbs(
-  folderId: string | null
+  folderId: string | null,
 ): Promise<FolderBreadcrumb[]> {
   if (folderId === null) {
-    return [{ id: null, name: "Drive" }];
+    return [{ id: null, name: 'Drive' }];
   }
 
   const crumbs: FolderBreadcrumb[] = [];
   let currentId: string | null = folderId;
 
   while (currentId !== null) {
-    const folderRow: { id: string; name: string; parent_id: string | null } | null = await prisma.folder.findUnique({
+    const folderRow: {
+      id: string;
+      name: string;
+      parent_id: string | null;
+    } | null = await prisma.folder.findUnique({
       where: { id: currentId },
       select: { id: true, name: true, parent_id: true },
     });
@@ -178,7 +179,7 @@ export async function getBreadcrumbs(
     currentId = folderRow.parent_id;
   }
 
-  crumbs.unshift({ id: null, name: "Drive" });
+  crumbs.unshift({ id: null, name: 'Drive' });
   return crumbs;
 }
 
@@ -187,26 +188,24 @@ export async function searchFiles(query: string): Promise<FileItem[]> {
 
   const folders = await prisma.folder.findMany({
     where: {
-      name: { contains: q, mode: "insensitive" },
+      name: { contains: q, mode: 'insensitive' },
     },
-    orderBy: { name: "asc" },
+    orderBy: { name: 'asc' },
   });
 
   const files = await prisma.file.findMany({
     where: {
-      filename: { contains: q, mode: "insensitive" },
+      filename: { contains: q, mode: 'insensitive' },
+      status: 'READY',
     },
-    orderBy: { filename: "asc" },
+    orderBy: { filename: 'asc' },
   });
 
-  return [
-    ...folders.map(folderToItem),
-    ...files.map(fileToItem),
-  ];
+  return [...folders.map(folderToItem), ...files.map(fileToItem)];
 }
 
 export async function resolveSlugToFolderId(
-  slug: string[]
+  slug: string[],
 ): Promise<string | null> {
   let currentId: string | null = null;
 
@@ -230,10 +229,11 @@ export async function getFolderPath(folderId: string): Promise<string[]> {
   let currentId: string | null = folderId;
 
   while (currentId !== null) {
-    const folderRow: { id: string; parent_id: string | null } | null = await prisma.folder.findUnique({
-      where: { id: currentId },
-      select: { id: true, parent_id: true },
-    });
+    const folderRow: { id: string; parent_id: string | null } | null =
+      await prisma.folder.findUnique({
+        where: { id: currentId },
+        select: { id: true, parent_id: true },
+      });
 
     if (!folderRow) break;
 
@@ -251,7 +251,6 @@ interface PresignInput {
 }
 
 interface PresignedFile {
-  fileId: string;
   filename: string;
   key: string;
   uploadUrl: string;
@@ -263,48 +262,31 @@ export async function generatePresignedUrls(
   folderId: string,
   files: PresignInput[],
 ): Promise<PresignedFile[]> {
-  const session = await auth();
-  const performedBy = session?.user?.name || "system";
-
   const folder = await prisma.folder.findUnique({ where: { id: folderId } });
-  if (!folder) throw new Error("Folder not found");
+  if (!folder) throw new Error('Folder not found');
 
   const results: PresignedFile[] = [];
 
   for (const file of files) {
-    const ext = file.filename.includes(".")
-      ? "." + file.filename.split(".").pop()
-      : "";
-    const baseName = file.filename.includes(".")
-      ? file.filename.slice(0, file.filename.lastIndexOf("."))
+    const ext = file.filename.includes('.')
+      ? '.' + file.filename.split('.').pop()
+      : '';
+    const baseName = file.filename.includes('.')
+      ? file.filename.slice(0, file.filename.lastIndexOf('.'))
       : file.filename;
     const safeName = baseName
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
     const key = `${folderId}/${shortId()}-${safeName}${ext}`;
 
-    const fileRecord = await prisma.file.create({
-      data: {
-        filename: file.filename,
-        size: file.size,
-        mime_type: file.mimeType,
-        key,
-        status: "UNREADY",
-        folder_id: folderId,
-        created_by: performedBy,
-        updated_by: performedBy,
-      },
-    });
-
     const uploadUrl = s3.presign(key, {
-      method: "PUT",
+      method: 'PUT',
       type: file.mimeType,
       expiresIn: 3600,
     });
 
     results.push({
-      fileId: fileRecord.id,
       filename: file.filename,
       key,
       uploadUrl,
@@ -316,51 +298,78 @@ export async function generatePresignedUrls(
   return results;
 }
 
-export async function confirmUploads(fileIds: string[]): Promise<void> {
+interface ConfirmFileInput {
+  key: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+}
+
+export async function confirmUploads(
+  folderId: string,
+  files: ConfirmFileInput[],
+): Promise<void> {
   const session = await auth();
-  const performedBy = session?.user?.name || "system";
+  const performedBy = session?.user?.name || 'system';
 
-  await prisma.file.updateMany({
-    where: { id: { in: fileIds }, status: "UNREADY" },
-    data: { status: "READY" },
-  });
+  const folder = await prisma.folder.findUnique({ where: { id: folderId } });
+  if (!folder) throw new AppError('NotFoundError', 'Folder not found', 404);
 
-  const files = await prisma.file.findMany({
-    where: { id: { in: fileIds } },
-  });
+  const createdFiles = [];
 
   for (const file of files) {
+    const record = await prisma.file.create({
+      data: {
+        filename: file.filename,
+        size: file.size,
+        mime_type: file.mimeType,
+        key: file.key,
+        status: 'READY',
+        folder_id: folderId,
+        created_by: performedBy,
+        updated_by: performedBy,
+      },
+    });
+
     await logActivity({
-      action: "UPLOAD",
-      entityType: "FILE",
-      entityId: file.id,
-      entityName: file.filename,
-      description: `Uploaded file "${file.filename}"`,
+      action: 'UPLOAD',
+      entityType: 'FILE',
+      entityId: record.id,
+      entityName: record.filename,
+      description: `Uploaded file "${record.filename}"`,
       performedBy,
     });
+
+    createdFiles.push(record);
   }
 }
 
 export async function deleteFile(fileId: string): Promise<boolean> {
   const session = await auth();
-  const performedBy = session?.user?.name || "system";
+  const performedBy = session?.user?.name || 'system';
 
   const file = await prisma.file.findUnique({ where: { id: fileId } });
   if (!file) return false;
 
   if (!(await isUserCreated(file.created_by))) {
-    throw new AppError("ForbiddenError", "This file was created by an external service and cannot be deleted", 403);
+    throw new AppError(
+      'ForbiddenError',
+      'This file was created by an external service and cannot be deleted',
+      403,
+    );
   }
 
-  try {
-    await s3.delete(file.key);
-  } catch {}
+  if (file.status === 'READY') {
+    try {
+      await s3.delete(file.key);
+    } catch {}
+  }
 
   await prisma.file.delete({ where: { id: fileId } });
 
   await logActivity({
-    action: "DELETE",
-    entityType: "FILE",
+    action: 'DELETE',
+    entityType: 'FILE',
     entityId: file.id,
     entityName: file.filename,
     description: `Deleted file "${file.filename}"`,
@@ -372,40 +381,58 @@ export async function deleteFile(fileId: string): Promise<boolean> {
 
 export async function deleteFolder(folderId: string): Promise<boolean> {
   const session = await auth();
-  const performedBy = session?.user?.name || "system";
+  const performedBy = session?.user?.name || 'system';
 
   const folder = await prisma.folder.findUnique({ where: { id: folderId } });
   if (!folder) return false;
 
   if (!(await isUserCreated(folder.created_by))) {
-    throw new AppError("ForbiddenError", "This folder was created by an external service and cannot be deleted", 403);
+    throw new AppError(
+      'ForbiddenError',
+      'This folder was created by an external service and cannot be deleted',
+      403,
+    );
   }
 
-  const childFiles = await prisma.file.findMany({ where: { folder_id: folderId } });
+  const childFiles = await prisma.file.findMany({
+    where: { folder_id: folderId },
+  });
   for (const child of childFiles) {
     if (!(await isUserCreated(child.created_by))) {
-      throw new AppError("ForbiddenError", `Cannot delete folder: file "${child.filename}" was created by an external service`, 403);
+      throw new AppError(
+        'ForbiddenError',
+        `Cannot delete folder: file "${child.filename}" was created by an external service`,
+        403,
+      );
     }
   }
 
-  const childFolders = await prisma.folder.findMany({ where: { parent_id: folderId } });
+  const childFolders = await prisma.folder.findMany({
+    where: { parent_id: folderId },
+  });
   for (const child of childFolders) {
     if (!(await isUserCreated(child.created_by))) {
-      throw new AppError("ForbiddenError", `Cannot delete folder: subfolder "${child.name}" was created by an external service`, 403);
+      throw new AppError(
+        'ForbiddenError',
+        `Cannot delete folder: subfolder "${child.name}" was created by an external service`,
+        403,
+      );
     }
   }
 
   for (const file of childFiles) {
-    try {
-      await s3.delete(file.key);
-    } catch {}
+    if (file.status === 'READY') {
+      try {
+        await s3.delete(file.key);
+      } catch {}
+    }
   }
 
   await prisma.folder.delete({ where: { id: folderId } });
 
   await logActivity({
-    action: "DELETE",
-    entityType: "FOLDER",
+    action: 'DELETE',
+    entityType: 'FOLDER',
     entityId: folder.id,
     entityName: folder.name,
     description: `Deleted folder "${folder.name}"`,
@@ -415,15 +442,22 @@ export async function deleteFolder(folderId: string): Promise<boolean> {
   return true;
 }
 
-export async function renameFile(fileId: string, newName: string): Promise<FileItem> {
+export async function renameFile(
+  fileId: string,
+  newName: string,
+): Promise<FileItem> {
   const session = await auth();
-  const performedBy = session?.user?.name || "system";
+  const performedBy = session?.user?.name || 'system';
 
   const file = await prisma.file.findUnique({ where: { id: fileId } });
-  if (!file) throw new AppError("NotFoundError", "File not found", 404);
+  if (!file) throw new AppError('NotFoundError', 'File not found', 404);
 
   if (!(await isUserCreated(file.created_by))) {
-    throw new AppError("ForbiddenError", "This file was created by an external service and cannot be renamed", 403);
+    throw new AppError(
+      'ForbiddenError',
+      'This file was created by an external service and cannot be renamed',
+      403,
+    );
   }
 
   const updated = await prisma.file.update({
@@ -432,8 +466,8 @@ export async function renameFile(fileId: string, newName: string): Promise<FileI
   });
 
   await logActivity({
-    action: "RENAME",
-    entityType: "FILE",
+    action: 'RENAME',
+    entityType: 'FILE',
     entityId: file.id,
     entityName: newName,
     description: `Renamed file "${file.filename}" to "${newName}"`,
@@ -443,15 +477,22 @@ export async function renameFile(fileId: string, newName: string): Promise<FileI
   return fileToItem(updated);
 }
 
-export async function renameFolder(folderId: string, newName: string): Promise<FileItem> {
+export async function renameFolder(
+  folderId: string,
+  newName: string,
+): Promise<FileItem> {
   const session = await auth();
-  const performedBy = session?.user?.name || "system";
+  const performedBy = session?.user?.name || 'system';
 
   const folder = await prisma.folder.findUnique({ where: { id: folderId } });
-  if (!folder) throw new AppError("NotFoundError", "Folder not found", 404);
+  if (!folder) throw new AppError('NotFoundError', 'Folder not found', 404);
 
   if (!(await isUserCreated(folder.created_by))) {
-    throw new AppError("ForbiddenError", "This folder was created by an external service and cannot be renamed", 403);
+    throw new AppError(
+      'ForbiddenError',
+      'This folder was created by an external service and cannot be renamed',
+      403,
+    );
   }
 
   const updated = await prisma.folder.update({
@@ -460,8 +501,8 @@ export async function renameFolder(folderId: string, newName: string): Promise<F
   });
 
   await logActivity({
-    action: "RENAME",
-    entityType: "FOLDER",
+    action: 'RENAME',
+    entityType: 'FOLDER',
     entityId: folder.id,
     entityName: newName,
     description: `Renamed folder "${folder.name}" to "${newName}"`,

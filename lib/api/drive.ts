@@ -62,10 +62,16 @@ interface PresignFileInput {
 }
 
 interface PresignedFile {
-  fileId: string;
   filename: string;
   key: string;
   uploadUrl: string;
+  mimeType: string;
+  size: number;
+}
+
+export interface ConfirmFileInput {
+  key: string;
+  filename: string;
   mimeType: string;
   size: number;
 }
@@ -84,11 +90,14 @@ export async function requestPresignedUrls(
   return json.data as PresignedFile[];
 }
 
-export async function confirmUpload(fileIds: string[]): Promise<void> {
+export async function confirmUpload(
+  folderId: string,
+  files: ConfirmFileInput[],
+): Promise<void> {
   const res = await fetch(`${BASE}/upload/confirm`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fileIds }),
+    body: JSON.stringify({ folderId, files }),
   });
   const json = await res.json();
   if (!json.success) throw new Error(json.error?.message ?? "Failed to confirm upload");

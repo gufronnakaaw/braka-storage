@@ -1,7 +1,7 @@
 "use client";
 
 import { FileIcon } from "@/components/drive/file-icon";
-import { confirmUpload, requestPresignedUrls, uploadToS3 } from "@/lib/api/drive";
+import { confirmUpload, requestPresignedUrls, uploadToS3, type ConfirmFileInput } from "@/lib/api/drive";
 import { useDragDrop } from "@/lib/hooks";
 import { cn, getFileTypeFromExtension } from "@/lib/utils";
 import { toastError, toastSuccess } from "@/lib/utils/toast";
@@ -26,7 +26,7 @@ interface UploadFile {
   size: number;
   progress: number;
   status: "pending" | "presigning" | "uploading" | "done" | "error" | "cancelled";
-  fileId?: string;
+  key?: string;
   uploadUrl?: string;
   error?: string;
   abort?: () => void;
@@ -76,7 +76,7 @@ export const UploadZone = forwardRef<UploadZoneHandle, UploadZoneProps>(function
 
       const presigned = await requestPresignedUrls(folderId, fileInputs);
 
-      const confirmedIds: string[] = [];
+      const confirmedFiles: ConfirmFileInput[] = [];
 
       for (let i = 0; i < presigned.length; i++) {
         const presign = presigned[i];
@@ -84,7 +84,7 @@ export const UploadZone = forwardRef<UploadZoneHandle, UploadZoneProps>(function
 
         updateUpload(uploadEntry.id, {
           status: "uploading",
-          fileId: presign.fileId,
+          key: presign.key,
           uploadUrl: presign.uploadUrl,
         });
 
@@ -99,7 +99,12 @@ export const UploadZone = forwardRef<UploadZoneHandle, UploadZoneProps>(function
         try {
           await promise;
           updateUpload(uploadEntry.id, { status: "done", progress: 100, abort: undefined });
-          confirmedIds.push(presign.fileId);
+          confirmedFiles.push({
+            key: presign.key,
+            filename: presign.filename,
+            mimeType: presign.mimeType,
+            size: presign.size,
+          });
         } catch (err) {
           const isCancelled = err instanceof Error && err.message === "Upload cancelled";
           updateUpload(uploadEntry.id, {
@@ -110,9 +115,9 @@ export const UploadZone = forwardRef<UploadZoneHandle, UploadZoneProps>(function
         }
       }
 
-      if (confirmedIds.length > 0) {
-        await confirmUpload(confirmedIds);
-        toastSuccess(`${confirmedIds.length} file${confirmedIds.length !== 1 ? "s" : ""} uploaded`);
+      if (confirmedFiles.length > 0) {
+        await confirmUpload(folderId, confirmedFiles);
+        toastSuccess(`${confirmedFiles.length} file${confirmedFiles.length !== 1 ? "s" : ""} uploaded`);
         onUploaded?.();
       }
     } catch (err) {

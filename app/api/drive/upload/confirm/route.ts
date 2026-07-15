@@ -2,6 +2,6 @@ import { apiSuccess, confirmUploads, ConfirmUploadSchema, parseBody, withAuth, w
 
 export const POST = withErrorHandler(withAuth(async (req) => {
   const data = await parseBody(req, ConfirmUploadSchema);
-  await confirmUploads(data.fileIds);
+  await confirmUploads(data.folderId, data.files);
   return apiSuccess({ message: "Uploads confirmed" });
 }));

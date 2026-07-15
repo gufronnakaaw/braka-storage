@@ -53,8 +53,16 @@ export const PresignUploadSchema = z.object({
   files: z.array(PresignFileSchema).min(1, "At least one file is required").max(20, "Maximum 20 files per upload"),
 });
 
+export const ConfirmFileSchema = z.object({
+  key: z.string().min(1, "key is required"),
+  filename: z.string().trim().min(1, "filename is required").max(255),
+  mimeType: z.string().min(1, "MIME type is required"),
+  size: z.number().int().positive(),
+});
+
 export const ConfirmUploadSchema = z.object({
-  fileIds: z.array(z.string().min(1)).min(1, "At least one file ID is required"),
+  folderId: z.string().min(1, "folderId is required"),
+  files: z.array(ConfirmFileSchema).min(1, "At least one file is required"),
 });
 
 export const ApiKeyIdParamSchema = z.object({
