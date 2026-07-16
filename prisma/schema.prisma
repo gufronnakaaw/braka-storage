@@ -81,6 +81,7 @@ model File {
   mime_type         String
   key               String              @unique
   status            Status              @default(UNREADY)
+  thumbnail_key     String?
   folder_id         String
   folder            Folder              @relation(fields: [folder_id], references: [id])
 
