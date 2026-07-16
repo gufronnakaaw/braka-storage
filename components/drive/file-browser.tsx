@@ -1,22 +1,22 @@
-"use client";
+'use client';
 
-import { FileIcon } from "@/components/drive/file-icon";
+import { FileIcon } from '@/components/drive/file-icon';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
   ContextMenuTrigger,
-} from "@/components/ui/context-menu";
+} from '@/components/ui/context-menu';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import type { FileItem } from "@/lib/types";
-import { cn, formatFileSize } from "@/lib/utils";
+} from '@/components/ui/dropdown-menu';
+import type { FileItem } from '@/lib/types';
+import { cn, formatFileSize } from '@/lib/utils';
 import {
   ArrowUpDown,
   ChevronDown,
@@ -28,25 +28,27 @@ import {
   Link,
   MoreHorizontal,
   Trash2,
-} from "lucide-react";
-import type { ComponentType, ReactNode } from "react";
-import { useMemo, useState } from "react";
+} from 'lucide-react';
+import type { ComponentType, ReactNode } from 'react';
+import { useMemo, useState } from 'react';
+
+const PREVIEW_BASE = process.env.NEXT_PUBLIC_PREVIEW_URL ?? '';
 
 interface FileBrowserProps {
   files: FileItem[];
-  viewMode: "grid" | "list";
+  viewMode: 'grid' | 'list';
   onFolderOpen: (folderId: string) => void;
   onFilePreview: (file: FileItem) => void;
   onDownload?: (file: FileItem) => void;
   onCopyUrl?: (file: FileItem) => void;
   onRename?: (file: FileItem) => void;
   onDelete?: (file: FileItem) => void;
-  sortBy: "name" | "modifiedAt" | "size" | "type";
-  onSortChange: (sort: "name" | "modifiedAt" | "size" | "type") => void;
+  sortBy: 'name' | 'modifiedAt' | 'size' | 'type';
+  onSortChange: (sort: 'name' | 'modifiedAt' | 'size' | 'type') => void;
   disableActions?: boolean;
 }
 
-type SortDir = "asc" | "desc";
+type SortDir = 'asc' | 'desc';
 
 interface MenuItemProps {
   className?: string;
@@ -67,48 +69,55 @@ export function FileBrowser({
   onSortChange,
   disableActions = false,
 }: FileBrowserProps) {
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [thumbErrors, setThumbErrors] = useState<Set<string>>(new Set());
+
+  function handleThumbError(fileId: string) {
+    setThumbErrors((prev) => new Set(prev).add(fileId));
+  }
 
   const sortedFiles = useMemo(() => {
     const sorted = [...files].sort((a, b) => {
-      if (a.type === "folder" && b.type !== "folder") return -1;
-      if (a.type !== "folder" && b.type === "folder") return 1;
+      if (a.type === 'folder' && b.type !== 'folder') return -1;
+      if (a.type !== 'folder' && b.type === 'folder') return 1;
 
       let cmp = 0;
       switch (sortBy) {
-        case "name":
+        case 'name':
           cmp = a.name.localeCompare(b.name);
           break;
-        case "modifiedAt":
+        case 'modifiedAt':
           cmp =
-            new Date(a.modifiedAt).getTime() -
-            new Date(b.modifiedAt).getTime();
+            new Date(a.modifiedAt).getTime() - new Date(b.modifiedAt).getTime();
           break;
-        case "size":
+        case 'size':
           cmp = (a.size ?? 0) - (b.size ?? 0);
           break;
-        case "type":
+        case 'type':
           cmp = a.type.localeCompare(b.type) || a.name.localeCompare(b.name);
           break;
       }
-      return sortDir === "asc" ? cmp : -cmp;
+      return sortDir === 'asc' ? cmp : -cmp;
     });
     return sorted;
   }, [files, sortBy, sortDir]);
 
-  function handleSort(col: "name" | "modifiedAt" | "size" | "type") {
+  function handleSort(col: 'name' | 'modifiedAt' | 'size' | 'type') {
     if (sortBy === col) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     } else {
       onSortChange(col);
-      setSortDir("asc");
+      setSortDir('asc');
     }
   }
 
   function SortIcon({ col }: { col: string }) {
-    if (sortBy !== col) return <ArrowUpDown className="size-3 opacity-0 group-hover/col:opacity-100" />;
-    return sortDir === "asc" ? (
+    if (sortBy !== col)
+      return (
+        <ArrowUpDown className="size-3 opacity-0 group-hover/col:opacity-100" />
+      );
+    return sortDir === 'asc' ? (
       <ChevronUp className="size-3 text-primary" />
     ) : (
       <ChevronDown className="size-3 text-primary" />
@@ -120,7 +129,7 @@ export function FileBrowser({
     Item: ComponentType<MenuItemProps>,
     Separator: ComponentType,
   ) {
-    const isFile = file.type !== "folder";
+    const isFile = file.type !== 'folder';
 
     return (
       <>
@@ -129,27 +138,55 @@ export function FileBrowser({
           onClick={() => (isFile ? onFilePreview(file) : onFolderOpen(file.id))}
         >
           {isFile ? (
-            <><Eye className="size-3.5" /> Preview</>
+            <>
+              <Eye className="size-3.5" /> Preview
+            </>
           ) : (
-            <><FolderOpen className="size-3.5" /> Open</>
+            <>
+              <FolderOpen className="size-3.5" /> Open
+            </>
           )}
         </Item>
         {isFile && (
-          <Item className="gap-2 text-sm cursor-pointer" onClick={(e) => { e.stopPropagation(); onDownload?.(file); }}>
+          <Item
+            className="gap-2 text-sm cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDownload?.(file);
+            }}
+          >
             <Download className="size-3.5" /> Download
           </Item>
         )}
         {isFile && (
-          <Item className="gap-2 text-sm cursor-pointer" onClick={(e) => { e.stopPropagation(); onCopyUrl?.(file); }}>
+          <Item
+            className="gap-2 text-sm cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCopyUrl?.(file);
+            }}
+          >
             <Link className="size-3.5" /> Copy URL
           </Item>
         )}
         {isFile && <Separator />}
-        <Item className="gap-2 text-sm cursor-pointer" onClick={(e) => { e.stopPropagation(); onRename?.(file); }}>
+        <Item
+          className="gap-2 text-sm cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRename?.(file);
+          }}
+        >
           <Edit3 className="size-3.5" /> Rename
         </Item>
         <Separator />
-        <Item className="gap-2 text-sm text-destructive cursor-pointer" onClick={(e) => { e.stopPropagation(); onDelete?.(file); }}>
+        <Item
+          className="gap-2 text-sm text-destructive cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete?.(file);
+          }}
+        >
           <Trash2 className="size-3.5" /> Delete
         </Item>
       </>
@@ -172,32 +209,57 @@ export function FileBrowser({
     );
   }
 
-  if (viewMode === "grid") {
+  function isImageFile(file: FileItem): boolean {
+    return file.type === 'image' && !!file.thumbnailUrl && !!PREVIEW_BASE;
+  }
+
+  function getThumbnailUrl(file: FileItem): string {
+    return `${PREVIEW_BASE}/${file.thumbnailUrl}`;
+  }
+
+  if (viewMode === 'grid') {
     return (
-      <div className="flex-1 p-5 overflow-auto">
+      <div className="flex-1 p-5 overflow-auto will-change-transform">
         <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
           {sortedFiles.map((file) => {
+            const showThumbnail = isImageFile(file) && !thumbErrors.has(file.id);
+
             const item = (
               <div
                 key={file.id}
                 onClick={() =>
-                  file.type === "folder"
+                  file.type === 'folder'
                     ? onFolderOpen(file.id)
                     : onFilePreview(file)
                 }
                 onMouseEnter={() => setHoveredId(file.id)}
                 onMouseLeave={() => setHoveredId(null)}
                 className={cn(
-                  "group flex flex-col items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer",
-                  "bg-card/50 hover:bg-card",
+                  'group flex flex-col items-center gap-3 p-4 rounded-xl border transition-transform duration-150 cursor-pointer',
+                  'bg-card/50 hover:-translate-y-0.5 hover:shadow-lg contain-[layout_style_paint]',
                   hoveredId === file.id
-                    ? "border-primary/30 glow-accent"
-                    : "border-border"
+                    ? 'border-primary/30 glow-accent'
+                    : 'border-border',
                 )}
               >
-                <div className="flex items-center justify-center size-12 rounded-lg bg-secondary/50">
-                  <FileIcon type={file.type} size={28} />
-                </div>
+                {showThumbnail ? (
+                  <div className="size-20 rounded-lg overflow-hidden bg-secondary/30 ring-1 ring-black/5">
+                    <img
+                      src={getThumbnailUrl(file)}
+                      alt={file.name}
+                      className="size-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                      width={80}
+                      height={80}
+                      onError={() => handleThumbError(file.id)}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center size-12 rounded-lg bg-secondary/50">
+                    <FileIcon type={file.type} size={28} />
+                  </div>
+                )}
 
                 <p className="w-full text-center text-xs font-medium text-foreground truncate px-1">
                   {file.name}
@@ -211,11 +273,11 @@ export function FileBrowser({
               </div>
             );
 
-            return disableActions ? item : (
+            return disableActions ? (
+              item
+            ) : (
               <ContextMenu key={file.id}>
-                <ContextMenuTrigger>
-                  {item}
-                </ContextMenuTrigger>
+                <ContextMenuTrigger>{item}</ContextMenuTrigger>
                 <ContextMenuContent className="bg-card border-border w-48">
                   {renderFileMenu(file, ContextMenuItem, ContextMenuSeparator)}
                 </ContextMenuContent>
@@ -231,13 +293,13 @@ export function FileBrowser({
     <div className="flex-1 overflow-auto">
       <div className="flex items-center h-9 px-5 border-b border-border text-[11px] uppercase tracking-wider text-muted-foreground select-none sticky top-0 bg-background/90 backdrop-blur-sm z-10">
         <button
-          onClick={() => handleSort("name")}
+          onClick={() => handleSort('name')}
           className="group/col flex flex-1 cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
         >
           Name <SortIcon col="name" />
         </button>
         <button
-          onClick={() => handleSort("modifiedAt")}
+          onClick={() => handleSort('modifiedAt')}
           className="group/col flex w-36 cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
         >
           Modified <SortIcon col="modifiedAt" />
@@ -246,13 +308,13 @@ export function FileBrowser({
           Created By
         </span>
         <button
-          onClick={() => handleSort("type")}
+          onClick={() => handleSort('type')}
           className="group/col flex w-24 cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
         >
           Type <SortIcon col="type" />
         </button>
         <button
-          onClick={() => handleSort("size")}
+          onClick={() => handleSort('size')}
           className="group/col flex w-20 cursor-pointer items-center justify-end gap-1 text-right transition-colors hover:text-foreground"
         >
           Size <SortIcon col="size" />
@@ -261,84 +323,93 @@ export function FileBrowser({
       </div>
 
       {sortedFiles.map((file) => {
-            const row = (
-              <div
-                key={file.id}
-                onClick={() =>
-                  file.type === "folder"
-                    ? onFolderOpen(file.id)
-                    : onFilePreview(file)
-                }
-                className={cn(
-                  "group flex items-center h-11 px-5 border-b border-border/50 transition-colors cursor-pointer",
-                  hoveredId === file.id
-                    ? "bg-secondary/50"
-                    : "hover:bg-secondary/30"
-                )}
-                onMouseEnter={() => setHoveredId(file.id)}
-                onMouseLeave={() => setHoveredId(null)}
-              >
-                <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <FileIcon type={file.type} size={16} />
-                  <span className="text-sm text-foreground truncate">
-                    {file.name}
-                  </span>
-                </div>
+        const row = (
+          <div
+            key={file.id}
+            onClick={() =>
+              file.type === 'folder'
+                ? onFolderOpen(file.id)
+                : onFilePreview(file)
+            }
+            className={cn(
+              'group flex items-center h-11 px-5 border-b border-border/50 transition-colors cursor-pointer',
+              hoveredId === file.id
+                ? 'bg-secondary/50'
+                : 'hover:bg-secondary/30',
+            )}
+            onMouseEnter={() => setHoveredId(file.id)}
+            onMouseLeave={() => setHoveredId(null)}
+          >
+            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+              <FileIcon type={file.type} size={16} />
+              <span className="text-sm text-foreground truncate">
+                {file.name}
+              </span>
+            </div>
 
-                <span className="w-36 text-xs text-muted-foreground">
-                  {new Date(file.modifiedAt).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </span>
+            <span className="w-36 text-xs text-muted-foreground">
+              {new Date(file.modifiedAt).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </span>
 
-                <span className="w-32 text-xs text-muted-foreground truncate">
-                  {file.createdBy || "—"}
-                </span>
+            <span className="w-32 text-xs text-muted-foreground truncate">
+              {file.createdBy || '—'}
+            </span>
 
-                <span className="w-24 text-xs text-muted-foreground capitalize">
-                  {file.type === "folder" ? "Folder" : file.extension ?? file.type}
-                </span>
+            <span className="w-24 text-xs text-muted-foreground capitalize">
+              {file.type === 'folder'
+                ? 'Folder'
+                : (file.extension ?? file.type)}
+            </span>
 
-                <span className="w-20 text-xs text-muted-foreground text-right">
-                  {file.size ? formatFileSize(file.size) : "—"}
-                </span>
+            <span className="w-20 text-xs text-muted-foreground text-right">
+              {file.size ? formatFileSize(file.size) : '—'}
+            </span>
 
-                {!disableActions && (
-                  <div className="w-10 flex justify-end">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        onClick={(e) => e.stopPropagation()}
-                        className={cn(
-                          "flex size-7 cursor-pointer items-center justify-center rounded-md transition-all",
-                          hoveredId === file.id
-                            ? "text-foreground hover:bg-secondary"
-                            : "text-transparent"
-                        )}
-                      >
-                        <MoreHorizontal className="size-4" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-card border-border w-48">
-                        {renderFileMenu(file, DropdownMenuItem, DropdownMenuSeparator)}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                )}
+            {!disableActions && (
+              <div className="w-10 flex justify-end">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    onClick={(e) => e.stopPropagation()}
+                    className={cn(
+                      'flex size-7 cursor-pointer items-center justify-center rounded-md transition-all',
+                      hoveredId === file.id
+                        ? 'text-foreground hover:bg-secondary'
+                        : 'text-transparent',
+                    )}
+                  >
+                    <MoreHorizontal className="size-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="bg-card border-border w-48"
+                  >
+                    {renderFileMenu(
+                      file,
+                      DropdownMenuItem,
+                      DropdownMenuSeparator,
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-            );
+            )}
+          </div>
+        );
 
-            return disableActions ? row : (
-              <ContextMenu key={file.id}>
-                <ContextMenuTrigger>
-                  {row}
-                </ContextMenuTrigger>
-                <ContextMenuContent className="bg-card border-border w-48">
-                  {renderFileMenu(file, ContextMenuItem, ContextMenuSeparator)}
-                </ContextMenuContent>
-              </ContextMenu>
-            );
-          })}
+        return disableActions ? (
+          row
+        ) : (
+          <ContextMenu key={file.id}>
+            <ContextMenuTrigger>{row}</ContextMenuTrigger>
+            <ContextMenuContent className="bg-card border-border w-48">
+              {renderFileMenu(file, ContextMenuItem, ContextMenuSeparator)}
+            </ContextMenuContent>
+          </ContextMenu>
+        );
+      })}
     </div>
   );
 }

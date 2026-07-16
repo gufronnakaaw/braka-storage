@@ -1,6 +1,7 @@
 import prisma from '@/lib/server/prisma';
 import type { FileItem, FolderBreadcrumb, StorageUsage } from '@/lib/types';
 import { getFileTypeFromExtension } from '@/lib/utils';
+import Sharp from 'sharp';
 import { auth } from '../auth';
 import { logActivity } from './activity-log';
 import { AppError } from './errors';
@@ -63,6 +64,7 @@ function fileToItem(file: {
   size: number;
   mime_type: string;
   key: string;
+  thumbnail_key: string | null;
   folder_id: string;
   created_at: Date;
   updated_at: Date;
@@ -80,6 +82,7 @@ function fileToItem(file: {
     extension: ext || undefined,
     parentId: file.folder_id,
     key: file.key,
+    thumbnailUrl: file.thumbnail_key ?? undefined,
     createdAt: file.created_at.toISOString(),
     modifiedAt: file.updated_at.toISOString(),
     ownerId: file.created_by,
@@ -331,17 +334,35 @@ export async function confirmUploads(
       },
     });
 
+    if (file.mimeType.startsWith('image/')) {
+      generateThumbnail(record.id, file.key).catch(() => {});
+    }
+
     await logActivity({
       action: 'UPLOAD',
       entityType: 'FILE',
       entityId: record.id,
       entityName: record.filename,
-      description: `Uploaded file "${record.filename}"`,
+      description: `Uploaded file "${file.filename}"`,
       performedBy,
     });
 
     createdFiles.push(record);
   }
+}
+
+async function generateThumbnail(fileId: string, key: string) {
+  const buf = await s3.file(key).arrayBuffer();
+  const webp = await Sharp(buf)
+    .resize({ width: 200, withoutEnlargement: true })
+    .webp({ quality: 80 })
+    .toBuffer();
+  const thumbKey = `thumbnail/${fileId}.webp`;
+  await s3.write(thumbKey, webp);
+  await prisma.file.update({
+    where: { id: fileId },
+    data: { thumbnail_key: thumbKey },
+  });
 }
 
 export async function deleteFile(fileId: string): Promise<boolean> {
@@ -363,6 +384,11 @@ export async function deleteFile(fileId: string): Promise<boolean> {
     try {
       await s3.delete(file.key);
     } catch {}
+    if (file.thumbnail_key) {
+      try {
+        await s3.delete(file.thumbnail_key);
+      } catch {}
+    }
   }
 
   await prisma.file.delete({ where: { id: fileId } });
@@ -425,6 +451,11 @@ export async function deleteFolder(folderId: string): Promise<boolean> {
       try {
         await s3.delete(file.key);
       } catch {}
+      if (file.thumbnail_key) {
+        try {
+          await s3.delete(file.thumbnail_key);
+        } catch {}
+      }
     }
   }
 
