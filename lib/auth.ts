@@ -1,17 +1,17 @@
-import prisma from "@/lib/server/prisma";
-import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
+import prisma from '@/lib/server/prisma';
+import NextAuth from 'next-auth';
+import Credentials from 'next-auth/providers/credentials';
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
-  session: { strategy: "jwt" },
+  session: { strategy: 'jwt', maxAge: 60 * 60 * 3 }, // 3 hours
   pages: {
-    signIn: "/login",
+    signIn: '/login',
   },
   providers: [
     Credentials({
       credentials: {
-        username: { label: "Username", type: "text" },
-        password: { label: "Password", type: "password" },
+        username: { label: 'Username', type: 'text' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         const username = credentials?.username as string | undefined;
@@ -47,10 +47,11 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        (session.user as { username?: string }).username = token.username as string;
+        (session.user as { username?: string }).username =
+          token.username as string;
       }
       return session;
     },
   },
-  trustHost: true
+  trustHost: true,
 });
