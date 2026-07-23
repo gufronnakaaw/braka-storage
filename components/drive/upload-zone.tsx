@@ -8,12 +8,13 @@ import { toastError, toastSuccess } from "@/lib/utils/toast";
 import {
   AlertCircle,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   FileUp,
   Minus,
-  Upload,
   X,
 } from "lucide-react";
-import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 
 export interface UploadZoneHandle {
   processFiles: (files: File[]) => void;
@@ -42,6 +43,7 @@ interface UploadZoneProps {
 export const UploadZone = forwardRef<UploadZoneHandle, UploadZoneProps>(function UploadZone({ enabled = true, folderId, onUploaded }, ref) {
   const [uploads, setUploads] = useState<UploadFile[]>([]);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadsRef = useRef(uploads);
   uploadsRef.current = uploads;
@@ -64,6 +66,7 @@ export const UploadZone = forwardRef<UploadZoneHandle, UploadZoneProps>(function
 
     setUploads((prev) => [...prev, ...pending]);
     setIsPanelOpen(true);
+    setCollapsed(false);
 
     const fileInputs = pending.map((f) => ({
       filename: f.name,
@@ -149,10 +152,6 @@ export const UploadZone = forwardRef<UploadZoneHandle, UploadZoneProps>(function
     }
   }, [updateUpload]);
 
-  const clearCompleted = useCallback(() => {
-    setUploads((prev) => prev.filter((u) => u.status !== "done" && u.status !== "cancelled"));
-  }, []);
-
   useImperativeHandle(ref, () => ({ processFiles }), [processFiles]);
 
   const handleFiles = useCallback(
@@ -169,6 +168,13 @@ export const UploadZone = forwardRef<UploadZoneHandle, UploadZoneProps>(function
   ).length;
   const doneCount = uploads.filter((u) => u.status === "done").length;
   const totalCount = uploads.length;
+
+  useEffect(() => {
+    if (totalCount > 0 && activeCount === 0) {
+      const timer = setTimeout(() => setCollapsed(true), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [totalCount, activeCount]);
 
   return (
     <>
@@ -211,7 +217,13 @@ export const UploadZone = forwardRef<UploadZoneHandle, UploadZoneProps>(function
         <div className="fixed bottom-4 right-4 z-50 w-80 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-card">
             <div className="flex items-center gap-2">
-              <Upload className="size-3.5 text-primary" />
+              <button
+                onClick={() => setCollapsed((prev) => !prev)}
+                className="cursor-pointer p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+                title={collapsed ? "Expand" : "Collapse"}
+              >
+                {collapsed ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+              </button>
               <span className="text-xs font-medium text-foreground">
                 {activeCount > 0
                   ? `Uploading ${activeCount} file${activeCount !== 1 ? "s" : ""}`
@@ -229,27 +241,19 @@ export const UploadZone = forwardRef<UploadZoneHandle, UploadZoneProps>(function
                   Cancel all
                 </button>
               )}
-              {activeCount === 0 && doneCount > 0 && (
+              {activeCount === 0 && (
                 <button
-                  onClick={clearCompleted}
-                  className="cursor-pointer text-[10px] text-primary transition-colors hover:text-primary/80"
+                  onClick={() => { setUploads([]); setIsPanelOpen(false); }}
+                  className="cursor-pointer p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+                  title="Close"
                 >
-                  Clear
+                  <X className="size-3.5" />
                 </button>
               )}
-              <button
-                onClick={() => {
-                  if (activeCount > 0) cancelAll();
-                  setUploads([]);
-                  setIsPanelOpen(false);
-                }}
-                className="cursor-pointer p-0.5 text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <X className="size-3.5" />
-              </button>
             </div>
           </div>
 
+          {!collapsed && (
           <div className="max-h-56 overflow-y-auto">
             {uploads.map((file) => (
               <div
@@ -308,9 +312,10 @@ export const UploadZone = forwardRef<UploadZoneHandle, UploadZoneProps>(function
               </div>
             ))}
           </div>
+          )}
         </div>
       )}
-
+ 
       <button
         onClick={() => inputRef.current?.click()}
         className="hidden"
