@@ -210,7 +210,7 @@ export function FileBrowser({
   }
 
   function isImageFile(file: FileItem): boolean {
-    return file.type === 'image' && !!file.thumbnailUrl && !!PREVIEW_BASE;
+    return (file.mimeType?.startsWith('image/') || file.type === 'image') && !!file.thumbnailUrl && !!PREVIEW_BASE;
   }
 
   function getThumbnailUrl(file: FileItem): string {

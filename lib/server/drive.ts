@@ -1,6 +1,6 @@
 import prisma from '@/lib/server/prisma';
 import type { FileItem, FolderBreadcrumb, StorageUsage } from '@/lib/types';
-import { getFileTypeFromExtension } from '@/lib/utils';
+import { getFileTypeFromExtension, getFileTypeFromMime } from '@/lib/utils';
 import Sharp from 'sharp';
 import { auth } from '../auth';
 import { logActivity } from './activity-log';
@@ -73,10 +73,12 @@ function fileToItem(file: {
   const ext = file.filename.includes('.')
     ? (file.filename.split('.').pop() ?? '')
     : '';
+  const typeFromMime = getFileTypeFromMime(file.mime_type);
+
   return {
     id: file.id,
     name: file.filename,
-    type: getFileTypeFromExtension(ext),
+    type: typeFromMime !== "other" ? typeFromMime : getFileTypeFromExtension(ext),
     size: file.size,
     mimeType: file.mime_type,
     extension: ext || undefined,

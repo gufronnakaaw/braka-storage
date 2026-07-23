@@ -17,6 +17,64 @@ export function formatFileSize(bytes: number): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
+export type PreviewType = "image" | "video" | "audio" | "pdf" | "code" | null;
+
+export function getPreviewType(mimeType: string): PreviewType {
+  if (mimeType.startsWith("image/")) return "image";
+  if (mimeType.startsWith("video/")) return "video";
+  if (mimeType.startsWith("audio/")) return "audio";
+  if (mimeType === "application/pdf") return "pdf";
+  if (mimeType.startsWith("text/")) return "code";
+  return null;
+}
+
+export function isPreviewable(mimeType: string): boolean {
+  return getPreviewType(mimeType) !== null;
+}
+
+export function getFileTypeFromMime(mimeType: string): FileType {
+  if (mimeType.startsWith("image/")) return "image";
+  if (mimeType.startsWith("video/")) return "video";
+  if (mimeType.startsWith("audio/")) return "audio";
+  if (mimeType === "application/pdf") return "pdf";
+  if (mimeType === "text/csv") return "spreadsheet";
+  if (
+    mimeType === "application/msword" ||
+    mimeType ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    mimeType === "application/rtf"
+  )
+    return "document";
+  if (
+    mimeType === "application/vnd.ms-excel" ||
+    mimeType ===
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  )
+    return "spreadsheet";
+  if (
+    mimeType === "application/vnd.ms-powerpoint" ||
+    mimeType ===
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+  )
+    return "presentation";
+  if (mimeType.startsWith("application/zip") || mimeType.includes("tar") || mimeType.includes("compress"))
+    return "archive";
+  if (
+    mimeType.includes("javascript") ||
+    mimeType.includes("json") ||
+    mimeType.includes("yaml") ||
+    mimeType.endsWith("+xml") ||
+    mimeType === "text/css" ||
+    mimeType === "text/html" ||
+    mimeType === "text/markdown" ||
+    mimeType === "text/x-python" ||
+    mimeType.startsWith("text/x-")
+  )
+    return "code";
+  if (mimeType.startsWith("text/")) return "text";
+  return "other";
+}
+
 export function getFileTypeFromExtension(ext: string): FileType {
   const map: Record<string, FileType> = {
     png: "image", jpg: "image", jpeg: "image", gif: "image", svg: "image", webp: "image", ico: "image",
