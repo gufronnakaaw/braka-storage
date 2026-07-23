@@ -6,21 +6,17 @@ type ViewMode = "grid" | "list";
 const STORAGE_KEY = "braka-view-mode";
 
 export function useDriveViewMode() {
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY) as ViewMode | null;
-    if (saved && saved !== viewMode) {
-      setViewMode(saved);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved === "grid" || saved === "list") return saved;
     }
-    setHydrated(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return "grid";
+  });
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, viewMode);
   }, [viewMode]);
 
-  return { viewMode, setViewMode, hydrated };
+  return { viewMode, setViewMode };
 }

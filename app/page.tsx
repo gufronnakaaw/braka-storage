@@ -24,7 +24,7 @@ import { useMemo, useState } from 'react';
 
 export default function Home() {
   const router = useRouter();
-  const { viewMode, setViewMode, hydrated } = useDriveViewMode();
+  const { viewMode, setViewMode } = useDriveViewMode();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'modifiedAt' | 'size' | 'type'>(
@@ -100,7 +100,7 @@ export default function Home() {
         </div>
       </div>
 
-      {!hydrated || loading ? (
+      {loading ? (
         viewMode === 'grid' ? (
           <FileGridSkeleton />
         ) : (

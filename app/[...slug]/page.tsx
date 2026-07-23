@@ -36,7 +36,7 @@ export default function FolderPage({
   const router = useRouter();
   const uploadRef = useRef<UploadZoneHandle>(null);
 
-  const { viewMode, setViewMode, hydrated } = useDriveViewMode();
+  const { viewMode, setViewMode } = useDriveViewMode();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "modifiedAt" | "size" | "type">("name");
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
@@ -160,7 +160,7 @@ export default function FolderPage({
         </div>
       </div>
 
-      {!hydrated || loading ? (
+      {loading ? (
         viewMode === "grid" ? <FileGridSkeleton /> : <FileListSkeleton />
       ) : (
         <FileBrowser
