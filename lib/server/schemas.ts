@@ -37,7 +37,7 @@ export const SearchQuerySchema = z.object({
 export const LogsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
-  timeFilter: z.enum(["5m", "30m", "1h", "6h", "12h", "1d"]).default("1d"),
+  timeFilter: z.enum(["5m", "1h", "6h", "1d"]).default("1d"),
 });
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
