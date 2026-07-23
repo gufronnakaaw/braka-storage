@@ -165,9 +165,7 @@ All endpoints (except NextAuth) return a unified JSON envelope:
 | Hook                            | Description                               |
 | ------------------------------- | ----------------------------------------- |
 | `useDriveItems(parentId)`       | Fetch items in a folder                   |
-| `useDriveFolder(id)`            | Fetch folder metadata                     |
 | `useDriveBreadcrumbs(folderId)` | Fetch breadcrumb trail                    |
-| `useDriveResolveSlug(slug[])`   | Resolve URL path to folder ID             |
 | `useDriveSearch(query)`         | Search files and folders                  |
 | `useCreateFolder()`             | Mutation — create folder                  |
 | `useDeleteItem()`               | Mutation — delete file/folder             |

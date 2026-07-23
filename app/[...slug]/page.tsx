@@ -15,9 +15,7 @@ import {
   useCreateFolder,
   useDeleteItem,
   useDriveBreadcrumbs,
-  useDriveFolder,
   useDriveItems,
-  useDriveResolveSlug,
   useDriveSearch,
   useDriveViewMode,
   useRenameItem,
@@ -46,30 +44,23 @@ export default function FolderPage({
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [renamingFile, setRenamingFile] = useState<FileItem | null>(null);
 
-  const { data: resolvedId, isLoading: resolvingSlug } = useDriveResolveSlug(slug);
-  const { data: folder, isLoading: folderLoading } = useDriveFolder(resolvedId ?? undefined);
-  const { data: items, isLoading: itemsLoading, mutate: mutateItems } = useDriveItems(
-    resolvedId === null ? undefined : resolvedId,
-  );
-  const { data: searchResults, isLoading: searchLoading } = useDriveSearch(searchQuery);
-  const { data: breadcrumbs, isLoading: breadcrumbsLoading } = useDriveBreadcrumbs(
-    resolvedId === null ? undefined : resolvedId,
-  );
+  const folderId = slug.length > 0 ? slug[slug.length - 1] : null;
+  const { data: items, isLoading: itemsLoading, mutate: mutateItems } = useDriveItems(folderId);
+  const { data: searchResults } = useDriveSearch(searchQuery);
+  const { data: breadcrumbs, isLoading: breadcrumbsLoading } = useDriveBreadcrumbs(folderId);
 
   const { trigger: createFolder } = useCreateFolder();
   const { trigger: deleteItem } = useDeleteItem();
   const { trigger: renameItem } = useRenameItem();
 
-  const folderId = resolvedId ?? null;
+  const folderName = breadcrumbs?.[breadcrumbs.length - 1]?.name ?? "";
   const displayFiles = useMemo(() => {
     const files = searchQuery ? searchResults : items;
     return files ?? [];
   }, [searchQuery, searchResults, items]);
 
-  const notFound = !resolvingSlug && resolvedId === null;
-  const loading =
-    resolvingSlug ||
-    (!notFound && (folderLoading || itemsLoading || breadcrumbsLoading));
+  const notFound = slug.length > 0 && breadcrumbs && breadcrumbs.length === 1;
+  const loading = !notFound && (itemsLoading || breadcrumbsLoading);
 
   async function handleFolderOpen(subFolderId: string) {
     const subPath = await fetchFolderPath(subFolderId);
@@ -117,13 +108,13 @@ export default function FolderPage({
     );
   }
 
-  if (!folder && !loading) return null;
+  if (!loading && !notFound && !breadcrumbs) return null;
 
   return (
-    <DashboardLayout activeView="drive" mobileTitle={folder?.name}>
+    <DashboardLayout activeView="drive" mobileTitle={folderName}>
       <div className="hidden md:block">
         <Topbar
-          title={folder?.name ?? ""}
+          title={folderName}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           searchQuery={searchQuery}
